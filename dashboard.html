@@ -182,6 +182,20 @@
 
   .btn-new:hover { border-color: var(--accent); color: var(--accent); }
 
+  .new-role-form { display: flex; flex-direction: column; gap: 8px; }
+  .new-role-form input[type=text] { font-size: 13px; padding: 9px 10px; }
+  .new-role-actions { display: flex; gap: 8px; }
+  .btn-create, .btn-cancel {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 7px;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11.5px;
+    cursor: pointer;
+  }
+  .btn-create { border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .btn-cancel { border: 1px solid var(--border); background: none; color: var(--ink-muted); }
+
   /* ---------- main ---------- */
   .main { min-width: 0; display: flex; flex-direction: column; }
 
@@ -397,8 +411,15 @@
     <div class="role-list" id="roleList">
       <div class="rail-empty">Loading roles…</div>
     </div>
-    <div class="rail-foot">
+    <div class="rail-foot" id="railFoot">
       <button class="btn-new" id="newRoleBtn">+ New role</button>
+      <form class="new-role-form" id="newRoleForm" hidden>
+        <input type="text" id="newRoleNameInput" placeholder="Role name…" autocomplete="off" />
+        <div class="new-role-actions">
+          <button type="submit" class="btn-create">Create</button>
+          <button type="button" class="btn-cancel" id="cancelNewRole">Cancel</button>
+        </div>
+      </form>
     </div>
   </aside>
 
@@ -427,6 +448,9 @@
   const roleListEl = document.getElementById('roleList');
   const mainEl = document.getElementById('main');
   const newRoleBtn = document.getElementById('newRoleBtn');
+  const newRoleForm = document.getElementById('newRoleForm');
+  const newRoleNameInput = document.getElementById('newRoleNameInput');
+  const cancelNewRole = document.getElementById('cancelNewRole');
 
   function slugify(name) {
     return name.toLowerCase().trim()
@@ -603,8 +627,21 @@
       scheduleSave();
     });
 
-    document.getElementById('deleteBtn').addEventListener('click', async () => {
-      if (!confirm(`Delete "${d.name || selectedId}" permanently? This can't be undone.`)) return;
+    const deleteBtn = document.getElementById('deleteBtn');
+    let deleteArmed = false;
+    let disarmTimer = null;
+    deleteBtn.addEventListener('click', async () => {
+      if (!deleteArmed) {
+        deleteArmed = true;
+        deleteBtn.textContent = 'Click again to confirm delete';
+        clearTimeout(disarmTimer);
+        disarmTimer = setTimeout(() => {
+          deleteArmed = false;
+          deleteBtn.textContent = 'Delete this role permanently';
+        }, 4000);
+        return;
+      }
+      clearTimeout(disarmTimer);
       await db.collection('roles').doc(selectedId).delete();
       selectedId = null;
       selectedDoc = null;
@@ -658,8 +695,7 @@
     });
   }
 
-  newRoleBtn.addEventListener('click', async () => {
-    const name = prompt('Role name (e.g. "Senior Backend Engineer")');
+  async function createRole(name) {
     if (!name || !name.trim()) return;
     const id = await uniqueSlug(slugify(name));
     const doc = defaultDoc(name.trim());
@@ -667,6 +703,30 @@
     selectedId = id;
     selectedDoc = doc;
     renderDossier();
+  }
+
+  newRoleBtn.addEventListener('click', () => {
+    newRoleBtn.hidden = true;
+    newRoleForm.hidden = false;
+    newRoleNameInput.value = '';
+    newRoleNameInput.focus();
+  });
+
+  function closeNewRoleForm() {
+    newRoleForm.hidden = true;
+    newRoleBtn.hidden = false;
+  }
+
+  newRoleForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = newRoleNameInput.value;
+    closeNewRoleForm();
+    await createRole(name);
+  });
+
+  cancelNewRole.addEventListener('click', closeNewRoleForm);
+  newRoleNameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeNewRoleForm();
   });
 
   async function init() {
