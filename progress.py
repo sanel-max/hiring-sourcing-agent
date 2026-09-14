@@ -31,6 +31,8 @@ class SlackProgress:
         self.started_at = time.time()
         self.channel_id = None
         self.ts = None
+        self._phase_label = None
+        self._phase_started_at = None
         try:
             resp = post_message(channel, f"\U0001f50d Starting search for *{role_name}*…")
             if resp.get("ok"):
@@ -60,6 +62,25 @@ class SlackProgress:
         """Ad-hoc update outside the fixed step count -- for a phase (like
         scoring) whose length isn't known until it's already running."""
         self._update(f"\U0001f50d {text}…")
+
+    def note_progress(self, done, total, label):
+        """Like note(), but with its own ETA -- tracked from this phase's own
+        elapsed time (not the whole search's), since a phase like scoring N
+        candidates has a very different per-unit pace than searching a
+        platform. First call for a given label starts that phase's clock."""
+        now = time.time()
+        if self._phase_label != label:
+            self._phase_started_at = now
+            self._phase_label = label
+        elapsed = now - self._phase_started_at
+        remaining = None
+        if done > 0 and total > done:
+            avg = elapsed / done
+            remaining = avg * (total - done)
+        text = f"\U0001f50d {label} ({done}/{total}"
+        eta = _format_remaining(remaining)
+        text += f", {eta})" if eta else ")"
+        self._update(text)
 
     def finish(self, final_text):
         self._update(final_text)
