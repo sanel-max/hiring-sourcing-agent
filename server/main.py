@@ -140,4 +140,5 @@ async def debug_config():
         "slack_signing_secret": secret_status("SLACK_SIGNING_SECRET"),
         "slack_bot_token": secret_status("SLACK_BOT_TOKEN"),
         "slack_results_channel": os.environ.get("SLACK_RESULTS_CHANNEL"),  # not a secret
+        "ping": os.environ.get("PING"),  # diagnostic-only: proves whether a brand-new env var save reaches the app at all
     }
