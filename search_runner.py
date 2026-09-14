@@ -16,6 +16,7 @@ filter themselves rather than the tool doing it for them.
 
 import os
 
+from export import build_candidates_workbook
 from roles_store import load_role
 from scoring import score_batch
 from sourcing import search_all
@@ -44,7 +45,7 @@ def _format_results_blocks(role, candidates, total_cost, errors, requested_by):
     lines = [f"*Sourcing results for {role.name}* (requested by <@{requested_by}>)"]
     lines.append(f"Searched {', '.join(role.platforms)} -- {len(candidates)} candidates found, sorted by fit score below. Fit score is a starting-point sort, not a filter -- review below that line too if the top ones aren't right.")
     if truncated > 0:
-        lines.append(f"_Showing top {len(shown)} of {len(candidates)} -- {truncated} more not shown here, narrow the keywords to see them._")
+        lines.append(f"_Showing top {len(shown)} of {len(candidates)} here -- the full list of all {len(candidates)} is attached below as a spreadsheet._")
     if errors:
         lines.append(f"_Some platforms had errors: {'; '.join(errors)}_")
     lines.append(f"_Apify cost: ${total_cost:.2f}_")
@@ -71,7 +72,7 @@ def run_search(role_id, requested_by, channel):
         raise ValueError(f"unknown role_id: {role_id}")
 
     from progress import SlackProgress
-    from server.slack_client import post_message
+    from server.slack_client import post_message, upload_file
 
     results_channel = os.environ.get("SLACK_RESULTS_CHANNEL", channel)
     # one step per platform searched, plus one for scoring
@@ -86,6 +87,23 @@ def run_search(role_id, requested_by, channel):
     text = _format_results_blocks(role, scored, total_cost, errors, requested_by)
     progress.finish(f"✅ Done sourcing for *{role.name}* — results below")
     post_message(results_channel, text)
+
+    # Full export: every scored candidate, not just the top N shown above.
+    # Uses the channel ID SlackProgress already resolved from its own post,
+    # since file uploads don't reliably resolve a bare channel name.
+    if scored and progress.channel_id:
+        try:
+            xlsx_bytes = build_candidates_workbook(role, scored)
+            safe_name = role.name.replace(" ", "_").replace("/", "-")
+            upload_file(
+                progress.channel_id,
+                filename=f"{safe_name}_candidates.xlsx",
+                file_bytes=xlsx_bytes,
+                title=f"{role.name} -- {len(scored)} candidates",
+                initial_comment=f"Full list of all {len(scored)} scored candidates for *{role.name}* (not just the top {MAX_RESULTS_PER_MESSAGE} shown above).",
+            )
+        except Exception as e:
+            print(f"EXPORT_UPLOAD_FAILED: {e}", flush=True)
 
 
 if __name__ == "__main__":
