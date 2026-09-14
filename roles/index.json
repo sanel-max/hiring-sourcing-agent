@@ -1,4 +1,5 @@
 [
   { "id": "sfx", "name": "SFX" },
-  { "id": "animation-studios", "name": "Animation Studios" }
+  { "id": "animation-studios", "name": "Animation Studios" },
+  { "id": "scriptwriter", "name": "Scriptwriter" }
 ]
