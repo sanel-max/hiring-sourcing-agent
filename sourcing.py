@@ -142,11 +142,22 @@ def clean_candidates(candidates):
     return cleaned
 
 
-def search_all(role):
+PLATFORM_LABELS = {
+    "linkedin": "Searching LinkedIn",
+    "twitter": "Searching X/Twitter",
+    "instagram": "Searching Instagram",
+}
+
+
+def search_all(role, progress=None):
     """Runs every platform listed in role.platforms.
     Returns (candidates, total_cost, errors) -- errors is a list of
     "<platform>: <message>" strings for platforms that failed, so one
-    broken actor doesn't take down the whole search."""
+    broken actor doesn't take down the whole search.
+
+    progress: optional SlackProgress (see progress.py) -- if given, calls
+    .step(label) before each platform and .advance() after, so the Slack
+    status message updates as the search moves through platforms."""
     all_candidates = []
     total_cost = 0.0
     errors = []
@@ -154,10 +165,14 @@ def search_all(role):
         searcher = PLATFORM_SEARCHERS.get(platform)
         if not searcher:
             continue
+        if progress:
+            progress.step(PLATFORM_LABELS.get(platform, f"Searching {platform}"))
         try:
             candidates, cost = searcher(role)
             all_candidates.extend(candidates)
             total_cost += cost
         except Exception as e:
             errors.append(f"{platform}: {e}")
+        if progress:
+            progress.advance()
     return clean_candidates(all_candidates), total_cost, errors

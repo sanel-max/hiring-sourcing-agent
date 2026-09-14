@@ -37,3 +37,10 @@ def post_message(channel, text, blocks=None, thread_ts=None):
     if thread_ts:
         payload["thread_ts"] = thread_ts
     return _post("chat.postMessage", payload)
+
+
+def update_message(channel, ts, text, blocks=None):
+    payload = {"channel": channel, "ts": ts, "text": text}
+    if blocks:
+        payload["blocks"] = blocks
+    return _post("chat.update", payload)

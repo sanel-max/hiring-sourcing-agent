@@ -70,12 +70,21 @@ def run_search(role_id, requested_by, channel):
     if role is None:
         raise ValueError(f"unknown role_id: {role_id}")
 
-    candidates, total_cost, errors = search_all(role)
-    scored = score_batch(candidates, role)
-
+    from progress import SlackProgress
     from server.slack_client import post_message
+
     results_channel = os.environ.get("SLACK_RESULTS_CHANNEL", channel)
+    # one step per platform searched, plus one for scoring
+    progress = SlackProgress(results_channel, role.name, total_steps=len(role.platforms) + 1)
+
+    candidates, total_cost, errors = search_all(role, progress=progress)
+
+    progress.step("Scoring candidates")
+    scored = score_batch(candidates, role, progress=progress)
+    progress.advance()
+
     text = _format_results_blocks(role, scored, total_cost, errors, requested_by)
+    progress.finish(f"✅ Done sourcing for *{role.name}* — results below")
     post_message(results_channel, text)
 
 

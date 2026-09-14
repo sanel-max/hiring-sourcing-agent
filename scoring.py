@@ -59,7 +59,10 @@ def score_candidate(candidate, role):
         messages=[{"role": "user", "content": json.dumps(payload)}],
     )
 
-    text = response.content[0].text.strip()
+    # content[0] isn't reliably the text block -- a thinking block (or other
+    # non-text block) can come first, so find the text block by type instead
+    # of assuming position.
+    text = next((b.text for b in response.content if getattr(b, "type", None) == "text"), "").strip()
     text = text.replace("```json", "").replace("```", "").strip()
 
     try:
@@ -75,5 +78,17 @@ def score_candidate(candidate, role):
     return candidate
 
 
-def score_batch(candidates, role):
-    return [score_candidate(c, role) for c in candidates]
+def score_batch(candidates, role, progress=None):
+    """progress: optional SlackProgress -- scoring runs one Claude call per
+    candidate sequentially, so with a large batch it's often the longest
+    single phase. Posts a status update every few candidates (via
+    progress.note, not the fixed step counter, since the total isn't known
+    until sourcing finishes) rather than the fixed per-platform steps."""
+    total = len(candidates)
+    update_every = max(1, total // 10) if total > 20 else max(1, total // 4) if total > 4 else 1
+    scored = []
+    for i, c in enumerate(candidates):
+        scored.append(score_candidate(c, role))
+        if progress and (i % update_every == 0 or i == total - 1):
+            progress.note(f"Scoring candidates ({i + 1}/{total})")
+    return scored
