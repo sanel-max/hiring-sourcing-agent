@@ -126,3 +126,9 @@ Each `/search` run costs real Apify credits (LinkedIn search is the priciest
 of the three) plus a small amount of Claude API usage for scoring. There's no
 built-in spend cap — if usage volume grows, worth adding one before it's
 run casually.
+
+LinkedIn and Twitter/X run one actor call **per keyword** (their search
+actors only accept one query at a time, unlike Instagram's, which takes a
+list) — so a role with 5 keywords means 5 LinkedIn calls and 5 Twitter calls
+per search, not 1. Cost scales roughly linearly with keyword count; keep
+that in mind before adding a long list of keywords to a role.

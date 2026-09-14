@@ -28,55 +28,75 @@ def _token():
     return token
 
 
-def search_linkedin(role, max_items=40):
-    query = " ".join(role.keywords) or role.name
-    run_input = {
-        "searchQuery": query,
-        "currentJobTitles": role.keywords or [role.name],
-        "profileScraperMode": "Short",
-        "maxItems": max_items,
-    }
-    if role.location:
-        run_input["locations"] = [role.location]
-    items, cost = run_and_fetch(_token(), LINKEDIN_ACTOR, run_input, "linkedin-search", timeout_secs=900)
+TARGET_RESULTS_PER_PLATFORM = 100
+
+
+def search_linkedin(role, target_total=TARGET_RESULTS_PER_PLATFORM):
+    # This actor takes one searchQuery string per call, not a list -- joining
+    # all keywords into one string would search for that exact combined
+    # phrase (near-zero matches) instead of "any of these." So one actor run
+    # per keyword instead, aggregated, each capped to keep the total near
+    # target_total rather than target_total-per-keyword.
+    keywords = role.keywords or [role.name]
+    per_keyword_max = max(15, target_total // len(keywords))
     candidates = []
-    for item in items:
-        handle = item.get("publicIdentifier") or item.get("username") or ""
-        candidates.append(Candidate(
-            platform="linkedin",
-            handle=handle,
-            name=item.get("name") or item.get("fullName") or "",
-            profile_url=item.get("profileUrl") or item.get("url") or (f"https://linkedin.com/in/{handle}" if handle else ""),
-            bio=item.get("about") or "",
-            headline=item.get("headline") or "",
-            extra=item,
-        ))
-    return candidates, cost
+    total_cost = 0.0
+    for kw in keywords:
+        run_input = {
+            "searchQuery": kw,
+            "currentJobTitles": [kw],
+            "profileScraperMode": "Short",
+            "maxItems": per_keyword_max,
+        }
+        if role.location:
+            run_input["locations"] = [role.location]
+        items, cost = run_and_fetch(_token(), LINKEDIN_ACTOR, run_input, f"linkedin-search:{kw}", timeout_secs=900)
+        total_cost += cost
+        for item in items:
+            handle = item.get("publicIdentifier") or item.get("username") or ""
+            candidates.append(Candidate(
+                platform="linkedin",
+                handle=handle,
+                name=item.get("name") or item.get("fullName") or "",
+                profile_url=item.get("profileUrl") or item.get("url") or (f"https://linkedin.com/in/{handle}" if handle else ""),
+                bio=item.get("about") or "",
+                headline=item.get("headline") or "",
+                extra=item,
+            ))
+    return candidates, total_cost
 
 
-def search_twitter(role, pages=1):
-    query = " ".join(role.keywords) or role.name
-    items, cost = run_and_fetch(_token(), TWITTER_ACTOR, {"query": query, "pages": pages}, "twitter-search", timeout_secs=300)
+def search_twitter(role, target_total=TARGET_RESULTS_PER_PLATFORM, pages_per_keyword=2):
+    # Same one-query-per-call constraint as LinkedIn -- search each keyword
+    # separately rather than one combined (and effectively unmatchable) string.
+    keywords = role.keywords or [role.name]
     candidates = []
-    for item in items:
-        handle = item.get("username") or item.get("screen_name") or ""
-        candidates.append(Candidate(
-            platform="twitter",
-            handle=handle,
-            name=item.get("name") or item.get("displayName") or "",
-            profile_url=item.get("url") or (f"https://x.com/{handle}" if handle else ""),
-            bio=item.get("description") or item.get("bio") or "",
-            extra=item,
-        ))
-    return candidates, cost
+    total_cost = 0.0
+    for kw in keywords:
+        items, cost = run_and_fetch(_token(), TWITTER_ACTOR, {"query": kw, "pages": pages_per_keyword}, f"twitter-search:{kw}", timeout_secs=300)
+        total_cost += cost
+        for item in items:
+            handle = item.get("username") or item.get("screen_name") or ""
+            candidates.append(Candidate(
+                platform="twitter",
+                handle=handle,
+                name=item.get("name") or item.get("displayName") or "",
+                profile_url=item.get("url") or (f"https://x.com/{handle}" if handle else ""),
+                bio=item.get("description") or item.get("bio") or "",
+                extra=item,
+            ))
+    return candidates, total_cost
 
 
-def search_instagram(role, max_results=50):
-    query = " ".join(role.keywords) or role.name
+def search_instagram(role, target_total=TARGET_RESULTS_PER_PLATFORM):
+    # This actor's searchQueries field natively takes a list -- one call
+    # searches every keyword, no need to loop like the other two platforms.
+    keywords = role.keywords or [role.name]
+    per_keyword_max = max(20, target_total // len(keywords))
     run_input = {
-        "searchQueries": [query],
-        "maxResultsPerQuery": min(max_results, 50),
-        "maxResults": max_results,
+        "searchQueries": keywords,
+        "maxResultsPerQuery": per_keyword_max,
+        "maxResults": target_total,
     }
     items, cost = run_and_fetch(_token(), INSTAGRAM_ACTOR, run_input, "instagram-search", timeout_secs=600)
     candidates = []
