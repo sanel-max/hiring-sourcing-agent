@@ -122,3 +122,22 @@ async def slack_interactions(request: Request, background_tasks: BackgroundTasks
 @app.get("/healthz")
 async def healthz():
     return {"ok": True}
+
+
+@app.get("/debug/config")
+async def debug_config():
+    """Reports whether each required env var is actually set, without ever
+    exposing secret values -- so a misconfiguration (blank/missing var) is
+    checkable without SSH or reading Render's dashboard directly."""
+
+    def secret_status(name):
+        val = (os.environ.get(name) or "").strip()
+        return {"set": bool(val), "length": len(val)}
+
+    return {
+        "anthropic_api_key": secret_status("ANTHROPIC_API_KEY"),
+        "apify_api_key": secret_status("APIFY_API_KEY"),
+        "slack_signing_secret": secret_status("SLACK_SIGNING_SECRET"),
+        "slack_bot_token": secret_status("SLACK_BOT_TOKEN"),
+        "slack_results_channel": os.environ.get("SLACK_RESULTS_CHANNEL"),  # not a secret
+    }
