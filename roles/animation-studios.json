@@ -1,0 +1,12 @@
+{
+  "id": "animation-studios",
+  "name": "Animation Studios",
+  "status": "active",
+  "location": "Worldwide",
+  "platforms": ["linkedin", "twitter", "instagram"],
+  "keywords": ["Animation Studio", "Design studio", "motion agency", "animation agency", "launch agency", "explainer video animation studio"],
+  "job_description": "Animation Studios -- end-to-end animation video production.\n\nAutonomous in creating end-to-end animation videos for our internal team, with minimal feedback from our animators, available on a daily basis for revisions + feedback. Needs to deliver our level of quality animation-wise. Their job is to deliver scenes daily to our team that we have given them.\n\nThis is a Visual Role -- needs portfolio/reel review (not just resume/experience).\n\nCore qualities to look for: Professional, proven background, very flexible.\n\nAdjacent/similar backgrounds that could do the job well (not an exact title match, but could do the job well): Animation Studio, Motion Design Agency, Launch Agency, SaaS Explainer Video Agency, 2D animation agency.\n\nScoring priorities from the internal criteria scorecard (5 = most important):\n- Craft/output quality (5): Portfolio, work samples, or past output quality relative to the role\n- Exact experience (5): Background corresponds and maps out exactly what we are looking for\n- Relevant experience (3): Similar skillset, possibly a different niche\n- Communication (2.5): Clear, concise, no red flags in how they present themselves/their work, client-facing\n- Role/culture fit (1): Pace, ownership style, and working style match how this team operates",
+  "good_examples": "Visual role -- evaluate primarily via portfolio/reel, not resume. Reference portfolios of what good looks like:\n- https://mosiddique.in/\n- https://x.com/suekhim/status/2060378988606878147\n- https://f.io/hpa-fqGK\n- https://www.behance.net/ayoubhadir\n- https://motionbruno.com/\n- https://launchanything.now/work",
+  "bad_examples": "Work-specific red flags that directly result in bad quality of work:\n- Not flexible\n- No-shows meetings, doesn't seem to care about the business\n- Late on deadlines\n- Too picky (yellow flag -- lower severity than the others)",
+  "binary_filters": []
+}
