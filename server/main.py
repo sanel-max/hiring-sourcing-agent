@@ -76,8 +76,8 @@ def _run_search_background(role_id, requested_by, channel):
         traceback.print_exc()
         try:
             post_message(channel, f"Sourcing search for role `{role_id}` failed: {e}")
-        except Exception:
-            pass
+        except Exception as post_error:
+            print(f"FAILED_TO_POST_ERROR_TO_SLACK: {post_error}", flush=True)
 
 
 @app.post("/slack/commands")
