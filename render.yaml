@@ -16,3 +16,5 @@ services:
         sync: false
       - key: SLACK_RESULTS_CHANNEL
         value: sourcing-search
+      - key: PYTHONUNBUFFERED
+        value: "1"
