@@ -85,6 +85,7 @@ async def slack_commands(request: Request):
     try:
         raw_body = await _verify_request(request)
     except SignatureError as e:
+        print(f"SLACK_AUTH_ERROR on /slack/commands: {e}", flush=True)
         return PlainTextResponse(str(e), status_code=401)
 
     form = dict(parse_qsl(raw_body.decode("utf-8")))
@@ -98,6 +99,7 @@ async def slack_interactions(request: Request, background_tasks: BackgroundTasks
     try:
         raw_body = await _verify_request(request)
     except SignatureError as e:
+        print(f"SLACK_AUTH_ERROR on /slack/interactions: {e}", flush=True)
         return PlainTextResponse(str(e), status_code=401)
 
     form = dict(parse_qsl(raw_body.decode("utf-8")))

@@ -14,7 +14,9 @@ class SignatureError(Exception):
 
 
 def verify(raw_body: bytes, timestamp: str, signature: str):
-    secret = os.environ.get("SLACK_SIGNING_SECRET")
+    # .strip() guards against the common copy-paste mistake of an extra
+    # trailing newline/space ending up in the env var value.
+    secret = (os.environ.get("SLACK_SIGNING_SECRET") or "").strip()
     if not secret:
         raise SignatureError("SLACK_SIGNING_SECRET not set")
     if not timestamp or not signature:
@@ -28,4 +30,4 @@ def verify(raw_body: bytes, timestamp: str, signature: str):
     computed = "v0=" + hmac.new(secret.encode("utf-8"), basestring, hashlib.sha256).hexdigest()
 
     if not hmac.compare_digest(computed, signature):
-        raise SignatureError("signature mismatch")
+        raise SignatureError(f"signature mismatch (secret len={len(secret)})")
