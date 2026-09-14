@@ -21,10 +21,18 @@ Return ONLY valid JSON, no markdown fences, no preamble, in this exact shape:
 "reason": "<short reason; null means the profile doesn't give enough info to judge>"}]}
 
 Scoring guidance:
-- fit_score reflects overall match to the job description and the good/bad examples given.
+- fit_score reflects overall match to the job description, and to the good/bad examples
+  when they're given -- good_examples/bad_examples are often blank (especially for creative
+  roles where "good" can't be written down as text), and that's expected, not a problem to
+  work around. Score off the job description alone in that case; don't invent your own
+  notion of what a good example looks like to fill the gap.
 - A binary filter is null (not false) when the profile simply doesn't mention it -- don't
   assume a red flag from silence.
 - Weight a failed binary filter heavily in fit_score; weight a null one only lightly.
+- This is a first-pass shortlist a human will review, not a hiring decision -- when genuinely
+  unsure, score toward the middle rather than a harsh low score, and say so in the rationale.
+  False negatives (a good candidate scored low and never looked at) are worse here than false
+  positives (a mediocre one the human quickly rules out).
 """
 
 

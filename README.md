@@ -6,6 +6,17 @@ against that role's criteria with Claude, and posts a ranked shortlist back
 into the channel. Runs as a small always-on server (FastAPI), separate from
 the sibling UGC creator-sourcing project.
 
+**Design intent — broad net, human does the final call.** This tool sources
+on keywords and does light structural cleanup (dedupe, drop empty profiles),
+but it deliberately does not hard-filter candidates out based on Claude's fit
+score. Every candidate found gets posted, sorted best-first, with the fit
+score and any binary-filter results shown as a starting point to scan —  not
+a pass/fail gate the tool applies for you. This matters most for creative
+roles where "good fit" can't be written down as a concrete example (job
+description + binary filters is the whole signal in that case) — the hiring
+team is expected to do the actual filtering from the full list, not trust an
+automatic cutoff to have done it for them.
+
 ## Pieces
 
 - **[dashboard.html](dashboard.html)** — published as the "Sourcing Criteria"

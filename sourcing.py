@@ -100,6 +100,28 @@ PLATFORM_SEARCHERS = {
 }
 
 
+def clean_candidates(candidates):
+    """Structural cleanup only -- no judgment calls about fit, just removing
+    junk the search actors sometimes return: duplicates (the same handle can
+    turn up more than once within a platform's results) and profiles with
+    nothing on them to even look at (no handle, or no name/bio/headline at
+    all). Everything else -- whether a candidate is actually a good fit --
+    is left to scoring (as a sort hint) and ultimately the hiring team."""
+    seen = set()
+    cleaned = []
+    for c in candidates:
+        if not c.handle:
+            continue
+        key = (c.platform, c.handle.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        if not (c.name or c.bio or c.headline):
+            continue
+        cleaned.append(c)
+    return cleaned
+
+
 def search_all(role):
     """Runs every platform listed in role.platforms.
     Returns (candidates, total_cost, errors) -- errors is a list of
@@ -118,4 +140,4 @@ def search_all(role):
             total_cost += cost
         except Exception as e:
             errors.append(f"{platform}: {e}")
-    return all_candidates, total_cost, errors
+    return clean_candidates(all_candidates), total_cost, errors

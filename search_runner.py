@@ -1,7 +1,17 @@
 """Runs one end-to-end search for a role: source candidates from every
-configured platform, score each against the role's criteria, and post a
-ranked summary back to Slack. Used both by the server's background task
+configured platform, score each against the role's criteria, and post the
+results back to Slack. Used both by the server's background task
 (triggered from a Slack modal submission) and standalone for local testing.
+
+Design intent: this is a broad-net starting point, not a hiring decision.
+Every candidate that clears the structural cleanup in sourcing.clean_candidates
+gets shown -- sorted by Claude's fit score, which is a sort hint, not a pass/
+fail gate. That matters most for creative roles where "good fit" can't be
+written down as a concrete example (see the SFX role) -- the model has less
+to go on, so silently dropping anyone under a score threshold would be the
+tool making a judgment call that belongs to the hiring team. Binary filter
+results are shown per-candidate (pass/fail/unclear) so the team can scan and
+filter themselves rather than the tool doing it for them.
 """
 
 import os
@@ -10,29 +20,48 @@ from roles_store import load_role
 from scoring import score_batch
 from sourcing import search_all
 
-MIN_FIT_SCORE_TO_SHOW = 50
-TOP_N = 15
+# Purely a Slack-message-length safety valve, not a quality bar -- if a
+# search finds more than this, everyone still gets scored, just not all
+# printed into one message.
+MAX_RESULTS_PER_MESSAGE = 40
+
+FILTER_ICONS = {True: "✅", False: "❌", None: "❔"}  # ✅ ❌ ❔
+
+
+def _binary_filter_line(candidate):
+    results = candidate.extra.get("binary_filter_results") or []
+    if not results:
+        return ""
+    parts = [f"{FILTER_ICONS.get(r.get('passes'), '❔')} {r.get('label', '')}" for r in results]
+    return "  ".join(parts)
 
 
 def _format_results_blocks(role, candidates, total_cost, errors, requested_by):
     ranked = sorted(candidates, key=lambda c: c.extra.get("fit_score", 0), reverse=True)
-    shown = [c for c in ranked if c.extra.get("fit_score", 0) >= MIN_FIT_SCORE_TO_SHOW][:TOP_N]
+    shown = ranked[:MAX_RESULTS_PER_MESSAGE]
+    truncated = len(ranked) - len(shown)
 
     lines = [f"*Sourcing results for {role.name}* (requested by <@{requested_by}>)"]
-    lines.append(f"Searched {', '.join(role.platforms)} -- {len(candidates)} candidates found, {len(shown)} shown (fit score >= {MIN_FIT_SCORE_TO_SHOW}).")
+    lines.append(f"Searched {', '.join(role.platforms)} -- {len(candidates)} candidates found, sorted by fit score below. Fit score is a starting-point sort, not a filter -- review below that line too if the top ones aren't right.")
+    if truncated > 0:
+        lines.append(f"_Showing top {len(shown)} of {len(candidates)} -- {truncated} more not shown here, narrow the keywords to see them._")
     if errors:
         lines.append(f"_Some platforms had errors: {'; '.join(errors)}_")
     lines.append(f"_Apify cost: ${total_cost:.2f}_")
     text = "\n".join(lines)
 
     if not shown:
-        text += "\n\nNo candidates cleared the fit-score bar this run."
+        text += "\n\nNo candidates found this run -- try broadening the keywords."
         return text
 
     for c in shown:
         score = c.extra.get("fit_score", 0)
         rationale = c.extra.get("rationale", "")
-        text += f"\n\n*<{c.profile_url}|{c.name or c.handle}>* -- {c.platform}, fit {score}/100\n{rationale}"
+        entry = f"\n\n*<{c.profile_url}|{c.name or c.handle}>* -- {c.platform}, fit {score}/100\n{rationale}"
+        filter_line = _binary_filter_line(c)
+        if filter_line:
+            entry += f"\n{filter_line}"
+        text += entry
     return text
 
 
