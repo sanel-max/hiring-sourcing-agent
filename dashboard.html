@@ -488,7 +488,7 @@
     return {
       name, status: 'active', location: '', platforms: ['linkedin', 'twitter', 'instagram'],
       keywords: [], job_description: '', good_examples: '', bad_examples: '',
-      binary_filters: [], created_at: now, updated_at: now,
+      binary_filters: [], auto_search: false, created_at: now, updated_at: now,
     };
   }
 
@@ -524,6 +524,7 @@
           <input class="name-field" id="nameField" type="text" value="" placeholder="Role name" />
           <div class="top-actions">
             <span class="save-indicator" id="saveIndicator"></span>
+            <button class="status-toggle" id="autoSearchToggle" title="When on, this role is automatically re-searched once a day for new candidates, with no one needing to run /source"></button>
             <button class="status-toggle" id="statusToggle"></button>
           </div>
         </div>
@@ -592,6 +593,18 @@
       const r = roles.find(x => x.id === selectedId);
       if (r) r.status = d.status;
       renderRoleList();
+      scheduleSave();
+    });
+
+    const autoSearchBtn = document.getElementById('autoSearchToggle');
+    function paintAutoSearch() {
+      autoSearchBtn.textContent = d.auto_search ? '☀️ auto-search: on' : 'auto-search: off';
+      autoSearchBtn.className = 'status-toggle' + (d.auto_search ? ' is-active' : '');
+    }
+    paintAutoSearch();
+    autoSearchBtn.addEventListener('click', () => {
+      d.auto_search = !d.auto_search;
+      paintAutoSearch();
       scheduleSave();
     });
 

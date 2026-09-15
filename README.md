@@ -92,6 +92,34 @@ Only roles with `status: active` are synced into `index.json` (what the
 `/search` modal's dropdown shows) — archiving a role on the dashboard removes
 it from the dropdown without deleting its criteria.
 
+## Autonomous daily search
+
+A role with **auto-search: on** (toggle on the dashboard, next to the
+active/archived status) gets automatically re-searched once a day, with no
+one needing to run `/source` — runs from a background thread inside the
+same always-on web service, checking roughly hourly for anything due.
+
+This is opt-in per role on purpose: it means real, recurring Apify + Claude
+spend starts the moment you flip it on, with nobody clicking anything each
+time. Like every other role edit, the toggle needs a **sync** ("ask Claude
+Code to sync roles") before it takes effect on the live server.
+
+Two things make this safe to leave running unattended:
+
+- **Only new candidates are reported.** Every candidate a scheduled run
+  finds gets checked against a persistent "seen" list for that role
+  (`scheduler_db.py`, stored on a Render persistent Disk so it survives
+  redeploys) *before* scoring — an already-seen candidate isn't re-scored
+  or re-posted, so daily runs don't just re-surface the same people at
+  the same cost every day.
+- **A daily cost cap** (`DAILY_COST_CAP_USD` env var, default $10) tracks
+  cumulative Apify cost across all scheduled runs for the day; once hit,
+  remaining scheduled runs are skipped until the next day. Manual `/source`
+  runs are never affected by this cap.
+
+Tune `SCHEDULER_RUN_INTERVAL_HOURS` (default 24) and `DAILY_COST_CAP_USD`
+as Render environment variables if once/day or $10/day isn't the right fit.
+
 ## Local testing
 
 ```bash

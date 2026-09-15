@@ -18,6 +18,7 @@ class Role:
     keywords: list = field(default_factory=list)          # search keywords/titles used to query each platform
     location: str = ""
     platforms: list = field(default_factory=lambda: ["linkedin", "twitter", "instagram"])
+    auto_search: bool = False   # opt-in: re-searched automatically once/day, new candidates only
 
     @classmethod
     def from_dict(cls, d):
@@ -31,6 +32,7 @@ class Role:
             keywords=d.get("keywords", []),
             location=d.get("location", ""),
             platforms=d.get("platforms") or ["linkedin", "twitter", "instagram"],
+            auto_search=bool(d.get("auto_search", False)),
         )
 
 

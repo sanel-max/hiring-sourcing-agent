@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import threading
 import traceback
 from urllib.parse import parse_qsl
 
@@ -10,11 +11,20 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from roles_store import list_roles
+from scheduler import scheduler_loop
 from search_runner import run_search
 from server.slack_client import open_view, post_message
 from server.slack_verify import SignatureError, verify
 
 app = FastAPI()
+
+
+@app.on_event("startup")
+def _start_scheduler():
+    # Daemon thread: runs forever alongside the app, doesn't block startup,
+    # and doesn't need its own event loop -- scheduler.py's calls are all
+    # blocking (requests, sqlite), which is fine off the main async loop.
+    threading.Thread(target=scheduler_loop, daemon=True).start()
 
 ROLE_SELECT_BLOCK_ID = "role_block"
 ROLE_SELECT_ACTION_ID = "role_select"
